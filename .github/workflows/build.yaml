@@ -75,10 +75,12 @@ jobs:
         run: dotnet build ${{ env.project_path }} --no-restore --configuration Release
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.project_name }} Release
+          name: "${{ env.project_name }} Release"
           path: "${{ env.project_path }}${{ env.build_path }}${{ env.project_name }} ${{ needs.checktag.outputs.version }}.zip"
+          if-no-files-found: error
+
 
   release:
     name: Draft Release
