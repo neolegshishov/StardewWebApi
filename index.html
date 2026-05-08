@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Stardew Map HUD</title>
+
+<style>
+    body {
+        margin: 0;
+        background: #1e1e1e;
+        overflow: hidden;
+        font-family: Consolas, monospace;
+        color: #f5e9c6;
+        image-rendering: pixelated;
+    }
+
+    #calendar-panel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(60, 60, 60, 0.95);
+        border-bottom: 4px solid #d2a04a;
+        padding: 10px;
+        font-size: 20px;
+        text-align: center;
+        display: none;
+        z-index: 10;
+    }
+
+    #map-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+    }
+
+    #map {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+
+    .entity {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        text-align: center;
+        font-size: 10px;
+        color: #fff;
+        text-shadow: 2px 2px #000;
+    }
+
+    .entity img {
+        width: 24px;
+        height: 24px;
+        display: block;
+        margin: 0 auto;
+        image-rendering: pixelated;
+    }
+
+    .npc-name {
+        font-size: 10px;
+        margin-top: -2px;
+    }
+</style>
+</head>
+<body>
+
+<div id="calendar-panel"></div>
+
+<div id="map-container">
+    <div id="map"></div>
+</div>
+
+<script>
+const MAP_WIDTH = 1200;   // ширина карты в пикселях
+const MAP_HEIGHT = 800;   // высота карты в пикселях
+
+document.getElementById("map").style.backgroundImage = "url('assets/map.png')";
+
+async function fetchJson(url) {
+    try {
+        const res = await fetch(url);
+        return await res.json();
+    } catch {
+        return null;
+    }
+}
+
+function tileToMap(x, y) {
+    return {
+        left: (x / 100) * MAP_WIDTH,
+        top: (y / 100) * MAP_HEIGHT
+    };
+}
+
+async function update() {
+    const map = document.getElementById("map");
+    map.innerHTML = "";
+
+    const npcs = await fetchJson("http://localhost:7882/api/v1/npcs/positions");
+    const player = await fetchJson("http://localhost:7882/api/v1/players/main");
+    const calendar = await fetchJson("http://localhost:7882/api/v1/calendar");
+
+    // Календарь
+    const panel = document.getElementById("calendar-panel");
+    if (calendar.birthdays.length > 0 || calendar.isFestival) {
+        panel.style.display = "block";
+        panel.innerHTML = "";
+
+        if (calendar.birthdays.length > 0) {
+            panel.innerHTML += "🎂 День рождения: " +
+                calendar.birthdays.map(b => b.displayName).join(", ") + "<br>";
+        }
+        if (calendar.isFestival) {
+            panel.innerHTML += "🎉 Фестиваль: " + calendar.festivalName;
+        }
+
+        document.getElementById("map-container").style.top = "80px";
+    } else {
+        panel.style.display = "none";
+        document.getElementById("map-container").style.top = "0";
+    }
+
+    // Игрок
+    if (player) {
+        const pos = tileToMap(player.tileX, player.tileY);
+        const div = document.createElement("div");
+        div.className = "entity";
+        div.style.left = pos.left + "px";
+        div.style.top = pos.top + "px";
+        div.innerHTML = `
+            <img src="assets/player.png">
+        `;
+        map.appendChild(div);
+    }
+
+    // NPC
+    if (Array.isArray(npcs)) {
+        npcs.forEach(npc => {
+            const pos = tileToMap(npc.tileX, npc.tileY);
+            const div = document.createElement("div");
+            div.className = "entity";
+            div.style.left = pos.left + "px";
+            div.style.top = pos.top + "px";
+
+            const portrait = `assets/portraits/${npc.name}.png`;
+
+            div.innerHTML = `
+                <img src="${portrait}" onerror="this.src='assets/player.png'">
+                <div class="npc-name">${npc.displayName}</div>
+            `;
+
+            map.appendChild(div);
+        });
+    }
+}
+
+setInterval(update, 500);
+update();
+</script>
+
+</body>
+</html>
