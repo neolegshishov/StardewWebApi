@@ -49,4 +49,22 @@ public class NPCsController : ApiControllerBase
 
         Response.Ok(npcs);
     }
+
+    [Route("/positions")]
+    public void GetNpcPositions()
+    {
+        var npcs = NPCUtilities.GetAllNPCs()
+            .Where(n => n.currentLocation is not null)
+            .Select(n => new
+            {
+                name = n.Name,
+                displayName = n.displayName,
+                location = n.currentLocation.Name,
+                tileX = n.getTileX(),
+                tileY = n.getTileY()
+            });
+
+        Response.Ok(npcs);
+    }
+
 }
